@@ -23,7 +23,6 @@ def calc_iflow(
     from inftools.misc.misc import read_log
     from inftools.tistools.max_op import COLS
 
-
     for idx0, rep in enumerate([int(i) for i in plot.split(" ")]):
 
         ens, pns, follow_size, shootings, pns_uniq, ens_uniq, shootings2, imcsteps = read_log(log, rep)
