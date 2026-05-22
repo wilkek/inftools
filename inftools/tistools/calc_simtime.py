@@ -50,7 +50,7 @@ def calc_simtime(
             # plt.axhline(pstart, color="k", ls="--")
         plt.ylabel("Shooting Attempts")
         plt.xlabel("Time [Days]")
-        plt.show()
+        # plt.show()
 
     print(f"Total Wall Time: {np.sum(paths)/3600/24:.01f} Days")
     print(f"Total Restarts: {len(tstarts)-1}")

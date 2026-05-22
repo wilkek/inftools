@@ -1,6 +1,6 @@
 import os
 from typing import Annotated
-
+import sys
 import typer
 from inftools.misc.infinit_helper import *
 
@@ -35,8 +35,7 @@ def generate_zero_paths(
     tmp_dir.mkdir(exist_ok = False)
     load_dir = pl.Path(config0["simulation"].get("load_dir", "load"))
     load_dir.mkdir(exist_ok = False)
-
-    initial_configuration = conf
+    initial_configuration = pl.Path(conf.strip('\'"')).resolve()
 
     config0["runner"]["workers"] = 1
     write_toml(config0, "zero_paths.toml")
@@ -78,7 +77,11 @@ def generate_zero_paths(
     status0, message0 = engine.propagate(path0, state.ensembles[0], system0)
     system0.set_pos((os.path.abspath(initial_configuration), 0))
     system0.order = path0.phasepoints[0].order
+    engine.rgen = np.random.default_rng()
+    print(f"Initial order parameter: {system0.order}")
+    print(f"Initial configuration: {os.path.abspath(initial_configuration)}")
     print("Propagating in ensemble [0+]")
+    engine.modify_velocities(system0, config["simulation"]["tis_set"])
     status1, message1 = engine.propagate(path1, state.ensembles[1], system0)
 
     # we did only one integration step in ensemble 0 because
@@ -239,6 +242,7 @@ def infinit(
         success = run_infretis_ext(iretis_steps)
         if not success:
             print(f" *** infinit exiting loop at cstep={iset['cstep']}")
+            sys.exit(1)
             return 1
         log.log("Updating interfaces.")
         update_toml_interfaces(config)

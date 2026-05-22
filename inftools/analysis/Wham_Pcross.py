@@ -847,6 +847,37 @@ def run_analysis(inp_dic):
         # "Semi"-WHAM factors for the [0^-] ensemble
         WFtot = [a + b for a, b in zip(WHAMfactorsMIN, WHAMfactors)]
         trajlabels = [int(x[0]) for x in matrix]
+        max_op = [x[2] for x in matrix]
+        # print('trajlabels_val, WFtot_val, WHAMfactorsMIN_val, WHAMfactors_val:')
+        # for trajlabels_val, WFtot_val, WHAMfactorsMIN_val, WHAMfactors_val  in zip(trajlabels, WFtot, WHAMfactorsMIN, WHAMfactors):
+            # print(f"{trajlabels_val}, {WFtot_val}, {WHAMfactorsMIN_val}, {WHAMfactors_val}")
+        out = os.path.join(folder, "path_weights_minus.txt")
+        D = {
+            "pnr": np.asarray(trajlabels, dtype=int),
+            "maxop": np.asarray(max_op, dtype=float),
+        }
+        A = np.asarray(WHAMfactorsMIN, dtype=float)
+        mask = A != 0.0
+        np.savetxt(
+            out,
+            np.c_[D["pnr"][mask], D["maxop"][mask], A[mask]],
+            header="path_nr\tmax_op\tweight",
+            fmt=["%8d", "%9.5f", "%16.8e"],
+        )
+        print('[i-] N Paths:' + str(A[mask].shape[0]) + ', Total Weight:' + str(np.sum(A[mask])))
+        out = os.path.join(folder, "path_weights_plus.txt")
+        A = np.asarray(WHAMfactors, dtype=float)
+        mask = A != 0.0
+        np.savetxt(
+            out,
+            np.c_[D["pnr"][mask], D["maxop"][mask], A[mask]],
+            header="path_nr\tmax_op\tweight",
+            fmt=["%8d", "%9.5f", "%16.8e"],
+        )
+
+        print('[i+] N Paths:' + str(A[mask].shape[0]) + ', Total Weight:' + str(np.sum(A[mask])))
+        print(np.sum(WFtot))
+
 
         calculate_free_energy(trajlabels, WFtot, inp_dic["trajdir"], folder, histo_stuff)
 
