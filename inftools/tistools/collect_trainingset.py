@@ -1,5 +1,13 @@
 from typing import Annotated
+
+import numpy as np
+import tomli
+import tomli_w
 import typer
+
+from inftools.misc.data_helper import data_reader
+from collections import defaultdict
+from ase.io import read, write
 
 
 def trainingset(
@@ -17,13 +25,7 @@ def trainingset(
     Only ASE-supported trajectory formats are supported
     (e.g., .traj, multi-frame .xyz, NetCDF)
     """
-    import numpy as np
-    import tomli
-    import tomli_w
-    from inftools.misc.data_helper import data_reader
-    from collections import defaultdict
-    from ase.io import read, write
-
+     
     print('test')
     sim = {}
     sim = {"toml": toml, "data": data}
