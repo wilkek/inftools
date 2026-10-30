@@ -181,8 +181,8 @@ def report_output(
     with open(folder / "summary.txt", "w") as f:
         f.write("measure\tvalue\terror (%)\n")
         f.write(f"pcross\t{runav_pcro[-1, -1]:.04e}\t{err_pcro[-1, -1]*100:.4f}\n")
-        f.write(f"flux (1/{units})\t{runav_flux[-1, -1]:.04e}\t{err_flux[-1, -1]*100:.4f}\n")
-        f.write(f"rate (1/{units})\t{runav_rate[-1, -1]:.4e}\t{err_rate[-1, -1]*100:.4f}\n")
+        f.write(f"flux (1/{units})\t{runav_flux[-1, -1] / unitconv:.04e}\t{err_flux[-1, -1]*100:.4f}\n")
+        f.write(f"rate (1/{units})\t{runav_rate[-1, -1] / unitconv:.4e}\t{err_rate[-1, -1]*100:.4f}\n")
         f.write(f"time step\t{md_dt}\t{units}\n")
         f.write(f"Sampled paths: {len(data)}\n")
         f.write(f"reactive: {rcnt}\n")

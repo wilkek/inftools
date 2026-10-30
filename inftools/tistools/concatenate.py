@@ -31,6 +31,9 @@ def trjcat(
             help="center this atom selction in the middle of the box",
         ),
     ] = "",
+    h5: Annotated[
+        str, typer.Option("-h5", help="if the traj.txt files are in h5 format")
+    ] = '',
 ):
     """
     Concatenate the trajectories from an infretis simulation to a single file.
@@ -48,10 +51,10 @@ def trjcat(
         if topology:
             import MDAnalysis as mda
             import tqdm
-
+    
     traj = pathlib.Path(traj)
     out = pathlib.Path(out)
-    if not traj.exists():
+    if not traj.exists() and h5 == '':
         raise FileNotFoundError(f"No such file {traj}")
     if out.exists():
         raise FileExistsError(f"File {out} allready exists.")
@@ -68,10 +71,58 @@ def trjcat(
 
 
     traj_dir = traj.parents[0]
-    traj_file_arr, index_arr = np.loadtxt(
-        str(traj), usecols=[1, 2], comments="#", dtype=str, unpack=True
-    )
-    index_arr = index_arr.astype(int)
+    if h5 == '':
+        traj_file_arr, index_arr, vel_arr = np.loadtxt(
+            str(traj), usecols=[1, 2, 3], comments="#", dtype=str, unpack=True, ndmin=2
+        )
+        index_arr = index_arr.astype(int)
+        vel_arr = vel_arr.astype(float)
+    else:
+        import h5py
+        path_no = traj.parts[-2]
+        traj_file_key = traj.parts[-1]
+        
+        with h5py.File(h5, "r") as f:
+            data = f[path_no][traj_file_key]
+            data = data[()]
+
+            # Handle structured/void records (e.g. HDF5 type '|V39')
+            if getattr(data.dtype, "fields", None):
+                field_names = list(data.dtype.fields.keys())
+                rows = []
+                for rec in data:
+                    row = []
+                    for name in field_names:
+                        val = rec[name]
+                        if isinstance(val, (bytes, bytearray)):
+                            val = val.decode("utf-8")
+                        row.append(str(val))
+                    rows.append(row)
+                data = np.asarray(rows, dtype=str)
+            else:
+                if data.dtype.kind in {"S", "a"}:
+                    data = np.char.decode(data, "utf-8")
+                elif data.dtype.kind == "O":
+                    data = np.vectorize(
+                        lambda x: x.decode("utf-8") if isinstance(x, (bytes, bytearray)) else str(x)
+                    )(data)
+                data = np.asarray(data)
+
+            # same layout as traj.txt: columns 1 (traj file), 2 (index), 3 (vel)
+            traj_file_arr = np.asarray(data[:, 1]).astype(str)
+            index_arr = np.asarray(data[:, 2]).astype(int)
+            vel_arr = np.asarray(data[:, 3]).astype(float)
+
+    # vel = -1 marks frames of time-reversed (backward) segments: their stored
+    # velocities point backward in path time. The concatenated file is written
+    # in path time order, so these velocities are negated when writing (ase);
+    # every frame of the output then carries forward-time velocities.
+    reversed_frames = vel_arr < 0
+    if reversed_frames.any() and engine == "mda":
+        print(
+            f"Warning: {int(reversed_frames.sum())} time-reversed frames; the mda writer "
+            "does not negate their velocities."
+        )
 
     # trajectory transformations
     if centersel and engine != "mda":
@@ -121,10 +172,12 @@ def trjcat(
 
     elif engine == "ase" and not topology:
         out = Trajectory(str(out), "w")
-        for traj_file, index in zip(traj_file_arr, index_arr):
+        for traj_file, index, rev in zip(traj_file_arr, index_arr, reversed_frames):
             # traj object
             u = U[traj_file]
             atoms = u[index]
+            if rev and atoms.get_velocities() is not None:
+                atoms.set_velocities(-atoms.get_velocities())
             out.write(atoms)
     else:
         with mda.Writer(str(out), n_atoms) as wfile:

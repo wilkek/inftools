@@ -31,6 +31,8 @@ futures = future_list()
 
 # here we only merge paths 101 to 1001, dummy variables
 start, end = 101, 1001
+loop_cnt = 0
+n_workers = WORKERS
 
 n_loops = end - start
 while loop_cnt < n_loops + n_workers:
